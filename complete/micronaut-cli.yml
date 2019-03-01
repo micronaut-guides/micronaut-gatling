@@ -1,0 +1,5 @@
+profile: service
+defaultPackage: mn.gatlin
+---
+testFramework: junit
+sourceLanguage: java
