@@ -1,16 +1,15 @@
-import com.github.jengelman.gradle.plugins.processes.tasks.JavaFork
 import groovy.json.JsonSlurper
 
 plugins {
     id "io.spring.dependency-management" version "1.0.6.RELEASE"
-    id "com.github.johnrengelman.shadow" version "4.0.2"
+    id "com.github.johnrengelman.shadow" version "5.0.0"
     id "application"
     id "java"
     id "scala"
     id "net.ltgt.apt-eclipse" version "0.21"
     id "net.ltgt.apt-idea" version "0.21"
-    id "com.github.johnrengelman.processes" version "0.5.0"
-    id "com.github.lkishalmi.gatling" version "3.0.2"
+    id 'com.github.psxpaul.execfork' version '0.1.13'
+    id "com.github.lkishalmi.gatling" version "3.2.9"
 }
 
 version "0.1"
@@ -24,7 +23,7 @@ repositories {
 
 dependencyManagement {
     imports {
-        mavenBom 'io.micronaut:micronaut-bom:1.1.0.M2'
+        mavenBom 'io.micronaut:micronaut-bom:2.0.0'
     }
 }
 
@@ -69,23 +68,20 @@ tasks.withType(JavaCompile){
     options.compilerArgs.add('-parameters')
 }
 
-task startMicronaut(type: JavaFork) {
-    description = 'Start Micronaut in the background.'
-    group = 'Load Test'
+task startMicronaut(type: com.github.psxpaul.task.JavaExecFork) {
+    dependsOn ':assemble'
     classpath = sourceSets.main.runtimeClasspath
     main = 'example.micronaut.Application'
+    jvmArgs = [ '-Xmx500m', '-Djava.awt.headless=true' ]
+    workingDir = "$buildDir/server"
+    standardOutput = "$buildDir/daemon.log"
+    errorOutput = "$buildDir/daemon-error.log"
+    waitForPort = 8080
 }
-startMicronaut.dependsOn assemble
 
-task stopMicronaut {
-    description = 'Stop the instance of Micronaut that was started with \'startMicronaut\''
-    group = 'Load Test'
-    doLast {
-        startMicronaut.processHandle.abort()
-    }
-}
 
 task waitUntilMicronautIsUp {
+    dependsOn startMicronaut
     description = 'Call the /health endpoint and wait until it responds with the status UP.'
     group = 'Load Test'
     doLast {
@@ -114,7 +110,8 @@ task waitUntilMicronautIsUp {
         }
     }
 }
-waitUntilMicronautIsUp.dependsOn startMicronaut
 
-gatlingRun.dependsOn waitUntilMicronautIsUp
-gatlingRun.finalizedBy stopMicronaut
+gatlingRun {
+    dependsOn waitUntilMicronautIsUp
+    finalizedBy stopMicronaut
+}
