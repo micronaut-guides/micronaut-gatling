@@ -1,8 +1,1 @@
-To run the Gatlin tests use:
-
-    cd complete
-    ./gradlew gatlingRun
-    
-reports will be generated under: 
-
-    /build/reports/gatling    
+# This guide has been deprecated and moved to https://github.com/micronaut-projects/micronaut-guides-poc. Please open any issue or pull request in that repository.
